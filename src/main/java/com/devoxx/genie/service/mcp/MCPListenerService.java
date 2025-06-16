@@ -41,7 +41,15 @@ public class MCPListenerService implements ChatModelListener {
             ChatMessage chatMessage = messages.get(messages.size() - 2);
 
             if (chatMessage instanceof ToolExecutionResultMessage toolExecutionResultMessage) {
-                log.debug(">>> Tool args: {}", toolExecutionResultMessage.toolName());
+                if (MCPService.isDebugLogsEnabled()) {
+                    log.info("[MCP Debug] Tool execution result - Tool: {}, ID: {}, Result: {}", 
+                             toolExecutionResultMessage.toolName(), 
+                             toolExecutionResultMessage.id(),
+                             toolExecutionResultMessage.text().substring(0, Math.min(100, toolExecutionResultMessage.text().length())));
+                } else {
+                    log.debug(">>> Tool result: {} -> {}", toolExecutionResultMessage.toolName(), 
+                             toolExecutionResultMessage.text().substring(0, Math.min(50, toolExecutionResultMessage.text().length())));
+                }
             } else if (chatMessage instanceof AiMessage aiMessage) {
                 if (aiMessage.text() != null && !aiMessage.text().isEmpty()) {
                     log.debug(">>> AI msg: {}", aiMessage.text());
@@ -54,7 +62,16 @@ public class MCPListenerService implements ChatModelListener {
                     List<ToolExecutionRequest> toolExecutionRequests = aiMessage.toolExecutionRequests();
                     if (toolExecutionRequests != null && !toolExecutionRequests.isEmpty()) {
                         ToolExecutionRequest toolExecutionRequest = toolExecutionRequests.get(0);
-                        log.debug(">>> Tool msg: {}", toolExecutionRequest.arguments());
+                        
+                        if (MCPService.isDebugLogsEnabled()) {
+                            log.info("[MCP Debug] Tool execution request - Tool: {}, ID: {}, Args: {}", 
+                                     toolExecutionRequest.name(), 
+                                     toolExecutionRequest.id(),
+                                     toolExecutionRequest.arguments());
+                        } else {
+                            log.debug(">>> Tool request: {} ({})", toolExecutionRequest.name(), toolExecutionRequest.id());
+                        }
+                        
                         postMessage(MCPMessage.builder()
                                 .type(MCPType.TOOL_MSG)
                                 .content(toolExecutionRequest.arguments())

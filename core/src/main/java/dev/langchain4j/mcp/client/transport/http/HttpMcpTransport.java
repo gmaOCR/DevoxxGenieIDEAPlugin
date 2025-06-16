@@ -28,6 +28,7 @@ public class HttpMcpTransport implements McpTransport {
     private static final Logger log = LoggerFactory.getLogger(HttpMcpTransport.class);
     private final String sseUrl;
     private final OkHttpClient client;
+    private final OkHttpClient sseClient;
     private final boolean logResponses;
     private final boolean logRequests;
     private EventSource mcpSseEventListener;
@@ -52,6 +53,15 @@ public class HttpMcpTransport implements McpTransport {
         this.logResponses = builder.logResponses;
         sseUrl = ensureNotNull(builder.sseUrl, "Missing SSE endpoint URL");
         client = httpClientBuilder.build();
+
+        OkHttpClient.Builder sseBuilder = new OkHttpClient.Builder()
+                .connectTimeout(timeout)
+                .writeTimeout(timeout)
+                // PAS de readTimeout : on désactive la coupure automatique
+                .readTimeout(0, TimeUnit.MILLISECONDS)
+                .retryOnConnectionFailure(true);
+
+        this.sseClient = sseBuilder.build();
     }
 
     @Override
@@ -141,7 +151,7 @@ public class HttpMcpTransport implements McpTransport {
         CompletableFuture<String> initializationFinished = new CompletableFuture<>();
         SseEventListener listener =
                 new SseEventListener(messageHandler, logResponses, initializationFinished, onFailure);
-        EventSource eventSource = EventSources.createFactory(client).newEventSource(request, listener);
+        EventSource eventSource = EventSources.createFactory(sseClient).newEventSource(request, listener);
         // wait for the SSE channel to be created, receive the POST url from the server, throw an exception if that
         // failed
         try {

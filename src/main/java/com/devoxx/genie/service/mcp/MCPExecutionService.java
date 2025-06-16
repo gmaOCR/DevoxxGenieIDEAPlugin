@@ -259,6 +259,14 @@ public class MCPExecutionService implements Disposable {
     }
 
     public static @NotNull List<String> createMCPCommand(@NotNull List<String> command) {
+        // Validate input
+        if (command == null) {
+            throw new IllegalArgumentException("Command cannot be null");
+        }
+        if (command.isEmpty()) {
+            throw new IllegalArgumentException("Command cannot be empty");
+        }
+        
         List<String> mcpCommand = new ArrayList<>();
         
         if (com.intellij.openapi.util.SystemInfo.isWindows) {
@@ -266,6 +274,7 @@ public class MCPExecutionService implements Disposable {
             mcpCommand.add("cmd.exe");
             mcpCommand.add("/c");
             String cmdString = command.stream()
+                    .filter(Objects::nonNull) // Filter out null arguments
                     .map(arg -> arg.contains(" ") ? "\"" + arg + "\"" : arg)
                     .collect(Collectors.joining(" "));
             mcpCommand.add(cmdString);
@@ -274,6 +283,7 @@ public class MCPExecutionService implements Disposable {
             mcpCommand.add("/bin/bash");
             mcpCommand.add("-c");
             String cmdString = command.stream()
+                    .filter(Objects::nonNull) // Filter out null arguments
                     .map(arg -> arg.contains(" ") ? "\"" + arg + "\"" : arg)
                     .collect(Collectors.joining(" "));
             mcpCommand.add(cmdString);

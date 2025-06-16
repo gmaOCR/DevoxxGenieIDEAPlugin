@@ -13,14 +13,12 @@ import com.devoxx.genie.service.prompt.threading.PromptTask;
 import com.devoxx.genie.service.prompt.threading.ThreadPoolManager;
 import com.devoxx.genie.ui.panel.PromptOutputPanel;
 import com.devoxx.genie.ui.util.NotificationUtil;
-import com.devoxx.genie.ui.webview.ConversationWebViewController;
 import com.intellij.openapi.project.Project;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
-import dev.langchain4j.service.tool.ToolExecution;
 import dev.langchain4j.service.tool.ToolProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -184,7 +182,20 @@ public class StreamingPromptStrategy extends AbstractPromptExecutionStrategy {
                 TokenStream chat = assistant.chat(context.getUserPrompt());
 
                 chat.onPartialResponse(streamingResponseHandler::onPartialResponse)
-                    .onToolExecuted(ToolExecution::request)
+                    .onToolExecuted(toolExecution -> {
+                        // Log pour le débogage MCP si activé
+                        if (MCPService.isDebugLogsEnabled()) {
+                            log.info("[MCP Streaming] Tool executed: {} -> {}", 
+                                     toolExecution.request().name(), 
+                                     toolExecution.result().substring(0, Math.min(100, toolExecution.result().length())));
+                        } else {
+                            log.debug("Tool executed: {} -> {}", toolExecution.request().name(), toolExecution.result());
+                        }
+                        
+                        // Important: Le framework LangChain4J gère automatiquement l'ajout 
+                        // du ToolExecutionResultMessage à la mémoire de chat.
+                        // Nous n'avons qu'à logger ici pour le débogage.
+                    })
                     .onCompleteResponse(streamingResponseHandler::onCompleteResponse)
                     .onError(streamingResponseHandler::onError)
                     .start();
