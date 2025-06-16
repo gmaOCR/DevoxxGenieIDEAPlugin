@@ -32,7 +32,13 @@ public class MCPService {
      */
     public static boolean isDebugLogsEnabled() {
         DevoxxGenieStateService stateService = DevoxxGenieStateService.getInstance();
-        return isMCPEnabled() && stateService.getMcpDebugLogsEnabled();
+        boolean enabled = isMCPEnabled() && stateService.getMcpDebugLogsEnabled();
+        // Log une seule fois si le débogage MCP est activé pour informer l'utilisateur
+        if (enabled && !notificationShown) { // Utilise notificationShown pour logger une seule fois
+            log.info("[MCP Debug] MCP Debug Logging is enabled.");
+            // notificationShown = true; // Décommentez si vous voulez que ce message n'apparaisse qu'une fois par session
+        }
+        return enabled;
     }
     
     /**
@@ -64,6 +70,7 @@ public class MCPService {
             log.info("[MCP Debug] {}", message);
         } else {
             // Log at debug level so we don't pollute the logs
+            // Conserve le niveau DEBUG pour les logs non explicites pour éviter la pollution.
             log.debug("[MCP] {}", message);
         }
     }

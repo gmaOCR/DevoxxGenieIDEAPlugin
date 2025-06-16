@@ -2,6 +2,7 @@ package com.devoxx.genie.service.prompt.response.streaming;
 
 import com.devoxx.genie.model.request.ChatMessageContext;
 import com.devoxx.genie.service.FileListManager;
+import com.devoxx.genie.service.mcp.MCPService; // Importation ajoutée
 import com.devoxx.genie.service.prompt.error.PromptErrorHandler;
 import com.devoxx.genie.service.prompt.error.StreamingException;
 import com.devoxx.genie.service.prompt.memory.ChatMemoryManager;
@@ -63,8 +64,15 @@ public class StreamingResponseHandler implements StreamingChatResponseHandler {
             return;
         }
 
-        log.debug("Received partial response: '{}...'", 
-                partialResponse.substring(0, Math.min(20, partialResponse.length())));
+        // Log plus détaillé pour le débogage MCP si activé
+        if (MCPService.isDebugLogsEnabled()) {
+            log.info("[MCP Streaming] Received partial response for context {}: '{}...'", 
+                     context.getId(), 
+                     partialResponse.substring(0, Math.min(50, partialResponse.length()))); // Log plus de caractères
+        } else {
+            log.debug("Received partial response: '{}...'", 
+                    partialResponse.substring(0, Math.min(20, partialResponse.length())));
+        }
         
         // Accumulate the response tokens 
         accumulatedResponse.append(partialResponse);
@@ -94,6 +102,13 @@ public class StreamingResponseHandler implements StreamingChatResponseHandler {
     public void onCompleteResponse(ChatResponse response) {
         if (isStopped) {
             return;
+        }
+
+        // Log pour le débogage MCP si activé
+        if (MCPService.isDebugLogsEnabled()) {
+            log.info("[MCP Streaming] Streaming completed for context {}. AI Message: {}", 
+                     context.getId(), 
+                     response.aiMessage().text().substring(0, Math.min(100, response.aiMessage().text().length())));
         }
 
         try {
@@ -132,14 +147,19 @@ public class StreamingResponseHandler implements StreamingChatResponseHandler {
             log.debug("Streaming completed for context {}", context.getId());
             onCompleteCallback.accept(response);
         } catch (Exception e) {
-            log.error("Error processing streaming completion", e);
+            log.error("Error processing streaming completion for context {}", context.getId(), e); // Ajout du contexte à l'erreur
             onErrorCallback.accept(e);
         }
     }
 
     @Override
     public void onError(@NotNull Throwable error) {
-        log.error("Streaming error for context {}: {}", context.getId(), error.getMessage());
+        // Log pour le débogage MCP si activé
+        if (MCPService.isDebugLogsEnabled()) {
+            log.error("[MCP Streaming] Streaming error for context {}: {}", context.getId(), error.getMessage(), error);
+        } else {
+            log.error("Streaming error for context {}: {}", context.getId(), error.getMessage());
+        }
         StreamingException streamingError = new StreamingException(
             "Error during streaming response", error);
         PromptErrorHandler.handleException(context.getProject(), streamingError, context);
